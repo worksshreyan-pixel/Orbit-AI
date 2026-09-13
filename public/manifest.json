@@ -1,0 +1,54 @@
+{
+  "name": "ORBIT — Personal AI Operating System",
+  "short_name": "ORBIT",
+  "description": "A private personal AI agent for managing projects, tasks, ideas, research, and productivity.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0b",
+  "theme_color": "#0a0a0b",
+  "scope": "/",
+  "id": "/",
+  "categories": ["productivity", "utilities", "business"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Command",
+      "short_name": "Command",
+      "url": "/?action=command",
+      "description": "Open ORBIT command center"
+    },
+    {
+      "name": "Tasks",
+      "short_name": "Tasks",
+      "url": "/tasks",
+      "description": "View your tasks"
+    },
+    {
+      "name": "Approvals",
+      "short_name": "Approvals",
+      "url": "/approvals",
+      "description": "Pending approvals"
+    }
+  ],
+  "display_override": ["standalone", "minimal-ui"]
+}
