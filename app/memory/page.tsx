@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AppShell } from '@/components/orbit/app-shell';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { Memory, MemoryCategory } from '@/lib/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,11 +25,7 @@ const categoryConfig: Record<MemoryCategory, { label: string; icon: typeof Brain
 };
 
 export default function MemoryPage() {
-  return (
-    <AppShell>
-      <MemoryContent />
-    </AppShell>
-  );
+  return <MemoryContent />;
 }
 
 function MemoryContent() {
@@ -61,10 +56,10 @@ function MemoryContent() {
     setCreating(true);
     try {
       const { error } = await supabaseClient.from('memories').insert({
-        key: key.trim(),
-        value: value.trim(),
+        content: value.trim(),
         category,
         importance,
+        metadata: { key: key.trim() },
       });
       if (error) throw error;
       toast.success('Memory saved');
@@ -184,7 +179,7 @@ function MemoryContent() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{mem.key}</p>
+                        <p className="text-sm font-medium">{(mem.metadata as any)?.key || 'Memory'}</p>
                         {importanceStars[mem.importance] > 0 && (
                           <div className="flex gap-0.5">
                             {Array.from({ length: importanceStars[mem.importance] }).map((_, i) => (
@@ -193,7 +188,7 @@ function MemoryContent() {
                           </div>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">{mem.value}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{mem.content}</p>
                       <span className="text-[10px] text-muted-foreground mt-1 block">{config.label}</span>
                     </div>
                   </div>

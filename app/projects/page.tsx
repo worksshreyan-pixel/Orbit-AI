@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AppShell } from '@/components/orbit/app-shell';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { Project } from '@/lib/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,9 +27,7 @@ const colorMap: Record<string, string> = {
 
 export default function ProjectsPage() {
   return (
-    <AppShell>
       <ProjectsContent />
-    </AppShell>
   );
 }
 

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AppShell } from '@/components/orbit/app-shell';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { Notification, NotificationType } from '@/lib/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,9 +22,7 @@ const typeConfig: Record<NotificationType, { icon: typeof Bell; color: string }>
 
 export default function NotificationsPage() {
   return (
-    <AppShell>
       <NotificationsContent />
-    </AppShell>
   );
 }
 

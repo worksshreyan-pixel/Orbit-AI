@@ -9,8 +9,9 @@ export type AgentRunStatus = 'understanding' | 'planning' | 'researching' | 'awa
 export type AgentStepType = 'understanding' | 'planning' | 'researching' | 'tool_call' | 'observation' | 'approval_request' | 'executing' | 'result' | 'error' | 'retry';
 export type AgentStepStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
-export type PermissionLevel = 'safe' | 'approval' | 'explicit';
+export type PermissionLevel = 'L1' | 'L2' | 'L3';
 export type NotificationType = 'agent_completed' | 'approval_required' | 'task_due' | 'research_completed' | 'project_update' | 'system' | 'info';
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'critical';
 export type IntegrationProvider = 'notion' | 'github' | 'google' | 'linear' | 'slack' | 'openai' | 'anthropic' | 'gemini' | 'custom';
 export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'expired';
 
@@ -72,9 +73,11 @@ export interface Idea {
 export interface Memory {
   id: string;
   user_id: string;
+  content?: string;
   category: MemoryCategory;
-  key: string;
-  value: string;
+  key?: string;
+  value?: string;
+  source?: string | null;
   project_id: string | null;
   importance: MemoryImportance;
   metadata: Record<string, unknown>;
@@ -102,13 +105,15 @@ export interface AgentRun {
   id: string;
   user_id: string;
   project_id: string | null;
-  request: string;
+  input?: string;
+  request?: string;
   status: AgentRunStatus;
   plan: Record<string, unknown>[];
-  result: string | null;
+  final_response?: string | null;
+  result?: string | null;
   error: string | null;
-  tools_used: string[];
-  metadata: Record<string, unknown>;
+  tools_used?: string[];
+  metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
   steps?: AgentStep[];
@@ -119,15 +124,18 @@ export interface AgentStep {
   agent_run_id: string;
   user_id: string;
   step_number: number;
-  step_type: AgentStepType;
-  title: string;
+  type?: AgentStepType;
+  step_type?: AgentStepType;
+  title?: string;
   description: string | null;
-  tool_name: string | null;
-  tool_input: Record<string, unknown>;
-  tool_output: Record<string, unknown>;
+  input?: string | null;
+  tool_name?: string | null;
+  output?: Record<string, any>;
+  tool_input?: Record<string, any>;
+  tool_output?: Record<string, any>;
   status: AgentStepStatus;
   error: string | null;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
@@ -154,8 +162,12 @@ export interface Notification {
   user_id: string;
   type: NotificationType;
   title: string;
-  body: string | null;
-  data: Record<string, unknown>;
+  message?: string | null;
+  body?: string | null;
+  metadata?: Record<string, any>;
+  data?: Record<string, any>;
+  priority: NotificationPriority;
+  speak: boolean;
   read: boolean;
   created_at: string;
 }
@@ -178,10 +190,22 @@ export interface Device {
   id: string;
   user_id: string;
   name: string | null;
+  status: 'active' | 'revoked';
   platform: string | null;
   push_subscription: Record<string, unknown> | null;
   user_agent: string | null;
   last_seen_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PairingSession {
+  id: string;
+  user_id: string;
+  code: string;
+  status: 'pending' | 'completed' | 'expired';
+  device_id: string | null;
+  expires_at: string;
   created_at: string;
   updated_at: string;
 }

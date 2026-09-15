@@ -65,7 +65,7 @@ export function AgentTimeline({ run: initialRun }: { run: AgentRun }) {
         schema: 'public',
         table: 'agent_runs',
         filter: `id=eq.${initialRun.id}`,
-      }, (payload) => {
+      }, (payload: any) => {
         setRun(payload.new as AgentRun);
       })
       .on('postgres_changes', {
@@ -104,7 +104,7 @@ export function AgentTimeline({ run: initialRun }: { run: AgentRun }) {
            <Brain className="h-4 w-4" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{run.request}</p>
+          <p className="text-sm font-medium">{run.input || run.request}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{statusLabels[run.status]}</p>
         </div>
       </div>
@@ -113,7 +113,7 @@ export function AgentTimeline({ run: initialRun }: { run: AgentRun }) {
       {steps.length > 0 && (
         <div className="space-y-2 ml-2">
           {steps.map((step, idx) => {
-            const Icon = stepIcons[step.step_type] || Brain;
+            const Icon = stepIcons[step.type || step.step_type || ''] || Brain;
             return (
               <div key={step.id} className="flex gap-3 animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
                 <div className="flex flex-col items-center">
@@ -129,9 +129,9 @@ export function AgentTimeline({ run: initialRun }: { run: AgentRun }) {
                   {step.description && (
                     <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
                   )}
-                  {step.tool_name && (
+                  {(step.input || step.tool_name) && step.type === 'tool_call' && (
                     <span className="inline-block mt-1 text-xs font-mono px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                      {step.tool_name}
+                      {(step.input || step.tool_name) as string}
                     </span>
                   )}
                   {step.error && (
@@ -145,9 +145,9 @@ export function AgentTimeline({ run: initialRun }: { run: AgentRun }) {
       )}
 
       {/* Result */}
-      {run.result && (
+      {(run.final_response || run.result) && (
         <div className="p-3 rounded-lg bg-muted/50 border border-border animate-fade-in">
-          <p className="text-sm whitespace-pre-wrap">{run.result}</p>
+          <p className="text-sm whitespace-pre-wrap">{run.final_response || run.result}</p>
         </div>
       )}
 

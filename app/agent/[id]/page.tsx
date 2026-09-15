@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AppShell } from '@/components/orbit/app-shell';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { AgentRun } from '@/lib/types/database';
 import { AgentTimeline } from '@/components/orbit/agent-timeline';
@@ -12,9 +11,7 @@ import { useRouter } from 'next/navigation';
 
 export default function AgentRunPage({ params }: { params: { id: string } }) {
   return (
-    <AppShell>
       <AgentRunContent id={params.id} />
-    </AppShell>
   );
 }
 

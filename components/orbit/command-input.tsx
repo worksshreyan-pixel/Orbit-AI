@@ -3,12 +3,13 @@
 import { useState, useRef, KeyboardEvent } from 'react';
 import { supabaseClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowUp, Loader2, Sparkles } from 'lucide-react';
+import { ArrowUp, Loader2, Sparkles, Mic, Square, Volume2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useVoice } from '@/lib/voice/context';
 
-interface CommandInputProps {
-  onRunStart?: () => void;
+  interface CommandInputProps {
+  onRunStart?: (runId: string) => void;
   className?: string;
 }
 
@@ -16,9 +17,31 @@ export function CommandInput({ onRunStart, className }: CommandInputProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const { state, startListening, stopListening, cancelListening, stopSpeaking, settings } = useVoice();
 
-  const handleSubmit = async () => {
-    if (!input.trim() || loading) return;
+  const handleVoiceToggle = () => {
+    if (state === 'listening') {
+      stopListening();
+    } else if (state === 'speaking') {
+      stopSpeaking();
+    } else {
+      startListening(
+        (finalTranscript) => {
+          setInput(finalTranscript);
+          // Auto submit on final transcript
+          setTimeout(() => handleSubmit(finalTranscript), 100);
+        },
+        (interimTranscript) => {
+          setInput(interimTranscript);
+        }
+      );
+    }
+  };
+
+  const handleSubmit = async (overrideInput?: string) => {
+    const textToSubmit = overrideInput ?? input;
+    if (!textToSubmit.trim() || loading) return;
     setLoading(true);
 
     try {
@@ -28,35 +51,26 @@ export function CommandInput({ onRunStart, className }: CommandInputProps) {
         return;
       }
 
-      const { data: run, error } = await supabaseClient
-        .from('agent_runs')
-        .insert({
-          request: input.trim(),
-          status: 'understanding',
-          plan: [],
-          tools_used: [],
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
       const response = await fetch('/api/agent/execute', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runId: run.id, request: input.trim() }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ request: textToSubmit.trim() }),
       });
 
+      let data: any = {};
+      try { data = await response.json(); } catch(e) {}
+
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Agent execution failed');
+        throw new Error(data.error || 'Agent execution failed');
       }
 
-      toast.success('Command submitted to ORBIT');
       setInput('');
-      onRunStart?.();
+      onRunStart?.(data.runId);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to submit command');
+      toast.error(err instanceof Error ? err.message : (err as any)?.message || 'Failed to submit command');
     } finally {
       setLoading(false);
     }
@@ -80,22 +94,37 @@ export function CommandInput({ onRunStart, className }: CommandInputProps) {
           onKeyDown={handleKeyDown}
           placeholder="What do you want ORBIT to do?"
           rows={1}
-          disabled={loading}
-          className="flex-1 resize-none bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50 max-h-32"
+          disabled={loading || state === 'listening' || state === 'processing'}
+          className={cn(
+            "flex-1 resize-none bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50 max-h-32",
+            state === 'listening' ? "text-primary/70 animate-pulse" : ""
+          )}
           style={{ minHeight: '40px' }}
         />
-        <Button
-          size="icon"
-          onClick={handleSubmit}
-          disabled={!input.trim() || loading}
-          className="rounded-xl shrink-0 h-9 w-9"
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <ArrowUp className="h-4 w-4" />
+        <div className="flex items-center gap-1 shrink-0">
+          {settings.voiceEnabled && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleVoiceToggle}
+              className={cn("rounded-xl shrink-0 h-9 w-9", state === 'listening' && "text-destructive hover:text-destructive", state === 'speaking' && "text-primary")}
+            >
+              {state === 'listening' ? <Square className="h-4 w-4" /> : state === 'speaking' ? <Volume2 className="h-4 w-4 animate-pulse" /> : <Mic className="h-4 w-4" />}
+            </Button>
           )}
-        </Button>
+          <Button
+            size="icon"
+            onClick={() => handleSubmit()}
+            disabled={!input.trim() || loading}
+            className="rounded-xl shrink-0 h-9 w-9"
+          >
+            {loading || state === 'processing' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ArrowUp className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
       <p className="text-xs text-muted-foreground mt-2 px-1">
         Press Enter to send · Shift+Enter for new line

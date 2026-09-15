@@ -6,25 +6,35 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export function createServerClient() {
+  const cookieStore = cookies();
+  
   return createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
-      persistSession: false,
+      persistSession: true,
+      storage: {
+        getItem: (key: string) => cookieStore.get(key)?.value ?? null,
+        setItem: () => {},
+        removeItem: () => {}
+      } as any
     },
   });
 }
 
-export async function getAuthUser() {
+export async function getAuthUser(req?: Request) {
   const cookieStore = cookies();
-  const token = cookieStore.get('sb-access-token')?.value;
-
-  if (!token) return null;
-
   const client = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    auth: { persistSession: false },
+    auth: {
+      persistSession: true,
+      storage: {
+        getItem: (key: string) => cookieStore.get(key)?.value ?? null,
+        setItem: () => {},
+        removeItem: () => {}
+      } as any
+    },
   });
 
-  const { data, error } = await client.auth.getUser(token);
+  const { data, error } = await client.auth.getUser();
   if (error || !data.user) return null;
   return data.user;
 }

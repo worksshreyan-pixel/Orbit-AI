@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AppShell } from '@/components/orbit/app-shell';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { Task, Project, TaskStatus, TaskPriority } from '@/lib/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,9 +38,7 @@ const priorityBadge: Record<TaskPriority, string> = {
 
 export default function TasksPage() {
   return (
-    <AppShell>
       <TasksContent />
-    </AppShell>
   );
 }
 

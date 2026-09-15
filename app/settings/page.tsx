@@ -5,6 +5,7 @@ import { AppShell } from '@/components/orbit/app-shell';
 import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/lib/theme-provider';
 import { supabaseClient } from '@/lib/supabase/client';
+import { useVoice } from '@/lib/voice/context';
 import type { Integration } from '@/lib/types/database';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,9 +18,10 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import {
   User, Palette, Bot, Bell, Shield, Database, LogOut,
-  Check, X, Github, FileText, MessageSquare, Brain, Cpu, Calendar,
+  Check, X, Github, FileText, MessageSquare, Brain, Cpu, Calendar, Monitor, Mic
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DevicesTab } from '@/components/settings/devices-tab';
 
 const integrationDefs = [
   { provider: 'notion', name: 'Notion', icon: FileText, description: 'Sync tasks and notes with your Notion workspace' },
@@ -43,7 +45,7 @@ function SettingsContent() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [aiProvider, setAiProvider] = useState('gemini');
   const [notifications, setNotifications] = useState({ agent: true, approvals: true, tasks: true, research: true });
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const { settings: voiceSettings, updateSettings: updateVoiceSettings, voices } = useVoice();
 
   useEffect(() => {
     (async () => {
@@ -76,6 +78,8 @@ function SettingsContent() {
           <TabsTrigger value="account" className="gap-1.5"><User className="h-3.5 w-3.5" />Account</TabsTrigger>
           <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" />Appearance</TabsTrigger>
           <TabsTrigger value="ai" className="gap-1.5"><Bot className="h-3.5 w-3.5" />AI Provider</TabsTrigger>
+          <TabsTrigger value="voice" className="gap-1.5"><Mic className="h-3.5 w-3.5" />Voice</TabsTrigger>
+          <TabsTrigger value="devices" className="gap-1.5"><Monitor className="h-3.5 w-3.5" />Devices</TabsTrigger>
           <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
           <TabsTrigger value="integrations" className="gap-1.5"><Cpu className="h-3.5 w-3.5" />Integrations</TabsTrigger>
           <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Security</TabsTrigger>
@@ -199,15 +203,97 @@ function SettingsContent() {
                 </p>
               </div>
               <Separator />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Voice */}
+        <TabsContent value="voice" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Voice Assistant</CardTitle>
+              <CardDescription>Configure speech recognition and text-to-speech preferences</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Voice input</p>
-                  <p className="text-xs text-muted-foreground">Enable speech-to-text for commands</p>
+                  <p className="text-sm font-medium">Voice Input</p>
+                  <p className="text-xs text-muted-foreground">Enable microphone for spoken commands</p>
                 </div>
-                <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} />
+                <Switch 
+                  checked={voiceSettings.voiceEnabled} 
+                  onCheckedChange={(v) => updateVoiceSettings({ voiceEnabled: v })} 
+                />
+              </div>
+              <Separator />
+              <div className="space-y-4 pt-2">
+                <p className="text-sm font-medium">Spoken Notifications</p>
+                
+                <div className="flex items-center justify-between pl-4">
+                  <p className="text-sm">Task Completions</p>
+                  <Switch checked={voiceSettings.spokenCompletionEnabled} onCheckedChange={(v) => updateVoiceSettings({ spokenCompletionEnabled: v })} />
+                </div>
+                <div className="flex items-center justify-between pl-4">
+                  <p className="text-sm">Approvals Required</p>
+                  <Switch checked={voiceSettings.spokenApprovalEnabled} onCheckedChange={(v) => updateVoiceSettings({ spokenApprovalEnabled: v })} />
+                </div>
+                <div className="flex items-center justify-between pl-4">
+                  <p className="text-sm">Reminders & Tasks Due</p>
+                  <Switch checked={voiceSettings.spokenRemindersEnabled} onCheckedChange={(v) => updateVoiceSettings({ spokenRemindersEnabled: v })} />
+                </div>
+                <div className="flex items-center justify-between pl-4">
+                  <p className="text-sm">Errors & Warnings</p>
+                  <Switch checked={voiceSettings.spokenErrorsEnabled} onCheckedChange={(v) => updateVoiceSettings({ spokenErrorsEnabled: v })} />
+                </div>
+              </div>
+
+              <Separator />
+              <div className="space-y-4 pt-2">
+                <p className="text-sm font-medium">Voice Settings</p>
+                
+                <div className="space-y-2">
+                  <Label>Preferred Voice</Label>
+                  <Select 
+                    value={voiceSettings.preferredVoice || "default"} 
+                    onValueChange={(v) => updateVoiceSettings({ preferredVoice: v === "default" ? "" : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Default System Voice" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Default System Voice</SelectItem>
+                      {voices.map(v => (
+                        <SelectItem key={v.voiceURI} value={v.voiceURI}>{v.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Label>Volume ({Math.round(voiceSettings.volume * 100)}%)</Label>
+                  <input 
+                    type="range" min="0" max="1" step="0.1" 
+                    value={voiceSettings.volume} 
+                    onChange={e => updateVoiceSettings({ volume: parseFloat(e.target.value) })}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Label>Speech Rate ({voiceSettings.rate}x)</Label>
+                  <input 
+                    type="range" min="0.5" max="2" step="0.1" 
+                    value={voiceSettings.rate} 
+                    onChange={e => updateVoiceSettings({ rate: parseFloat(e.target.value) })}
+                    className="w-full"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Devices */}
+        <TabsContent value="devices">
+          <DevicesTab />
         </TabsContent>
 
         {/* Notifications */}

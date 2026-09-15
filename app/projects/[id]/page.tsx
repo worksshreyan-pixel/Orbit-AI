@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AppShell } from '@/components/orbit/app-shell';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { Project, Task } from '@/lib/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,9 +17,7 @@ import { cn } from '@/lib/utils';
 
 export default function ProjectDetailPage({ params }: { params: { id: string } }) {
   return (
-    <AppShell>
       <ProjectDetail id={params.id} />
-    </AppShell>
   );
 }
 

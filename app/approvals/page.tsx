@@ -12,7 +12,11 @@ import { ShieldCheck, Check, X, ShieldAlert, Lock, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-const levelConfig: Record<PermissionLevel, { label: string; icon: typeof Shield; color: string }> = {
+const levelConfig: Record<string, { label: string; icon: typeof Shield; color: string }> = {
+  L1: { label: 'Safe', icon: ShieldCheck, color: 'bg-success/10 text-success' },
+  L2: { label: 'Approval Required', icon: Shield, color: 'bg-warning/10 text-warning' },
+  L3: { label: 'Explicit Confirmation', icon: Lock, color: 'bg-destructive/10 text-destructive' },
+  // Legacy DB support
   safe: { label: 'Safe', icon: ShieldCheck, color: 'bg-success/10 text-success' },
   approval: { label: 'Approval Required', icon: Shield, color: 'bg-warning/10 text-warning' },
   explicit: { label: 'Explicit Confirmation', icon: Lock, color: 'bg-destructive/10 text-destructive' },
@@ -118,7 +122,8 @@ function ApprovalsContent() {
       ) : (
         <div className="space-y-3">
           {filtered.map((a) => {
-            const level = levelConfig[a.permission_level];
+            const fallbackLevel = { label: 'Unknown permission level', icon: ShieldAlert, color: 'bg-muted text-muted-foreground' };
+            const level = levelConfig[a.permission_level] || fallbackLevel;
             const LevelIcon = level.icon;
             return (
               <Card key={a.id}>

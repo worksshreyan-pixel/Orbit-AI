@@ -10,11 +10,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue>({
-  user: null,
-  loading: true,
-  signOut: async () => {},
-});
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -22,11 +18,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=3600; SameSite=Lax`;
+      }
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        document.cookie = `sb-access-token=${session?.access_token}; path=/; max-age=3600; SameSite=Lax`;
+      } else if (event === 'SIGNED_OUT') {
+        document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax';
+      }
+      
       (async () => {
         setUser(session?.user ?? null);
         setLoading(false);
@@ -48,5 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
 }

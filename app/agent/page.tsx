@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AppShell } from '@/components/orbit/app-shell';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { AgentRun } from '@/lib/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,9 +23,7 @@ const statusLabels: Record<string, string> = {
 
 export default function AgentPage() {
   return (
-    <AppShell>
-      <AgentContent />
-    </AppShell>
+    <AgentContent />
   );
 }
 
@@ -117,15 +114,15 @@ function AgentContent() {
                        <Clock className="h-4 w-4" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{run.request}</p>
+                      <p className="text-sm font-medium">{run.input || run.request}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-muted-foreground">{statusLabels[run.status]}</span>
-                        {run.tools_used.length > 0 && (
-                          <span className="text-xs text-muted-foreground">· {run.tools_used.length} tools</span>
+                        {((run.tools_used?.length || 0) > 0 || (run.metadata?.tools_used?.length || 0) > 0) && (
+                          <span className="text-xs text-muted-foreground">· {(run.tools_used || run.metadata?.tools_used || []).length} tools</span>
                         )}
                       </div>
-                      {run.result && (
-                        <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{run.result}</p>
+                      {(run.final_response || run.result) && (
+                        <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{run.final_response || run.result}</p>
                       )}
                     </div>
                   </div>

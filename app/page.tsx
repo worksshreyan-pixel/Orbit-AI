@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AppShell } from '@/components/orbit/app-shell';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { Task, Project, AgentRun, Approval, Notification } from '@/lib/types/database';
+import { prioritizeTasks, normalizeTask } from '@/lib/agent/providers/prioritization';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,11 +25,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function HomePage() {
-  return (
-    <AppShell>
-      <HomeContent />
-    </AppShell>
-  );
+  return <HomeContent />;
 }
 
 function HomeContent() {
@@ -45,16 +41,25 @@ function HomeContent() {
   const loadData = useCallback(async () => {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) return;
+    const userId = session.user.id;
 
     const [tasksRes, projectsRes, runsRes, approvalsRes, notifsRes] = await Promise.all([
-      supabaseClient.from('tasks').select('*, project:projects(*)').eq('status', 'todo').order('priority', { ascending: false }).limit(5),
-      supabaseClient.from('projects').select('*').eq('status', 'active').order('updated_at', { ascending: false }).limit(4),
-      supabaseClient.from('agent_runs').select('*').order('created_at', { ascending: false }).limit(3),
-      supabaseClient.from('approvals').select('*').eq('status', 'pending').order('created_at', { ascending: false }).limit(3),
-      supabaseClient.from('notifications').select('*').eq('read', false).order('created_at', { ascending: false }).limit(5),
+      supabaseClient.from('tasks').select('*, project:projects(*)').eq('user_id', userId).neq('status', 'completed'),
+      supabaseClient.from('projects').select('*').eq('user_id', userId).eq('status', 'active').order('updated_at', { ascending: false }).limit(4),
+      supabaseClient.from('agent_runs').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(3),
+      supabaseClient.from('approvals').select('*').eq('user_id', userId).eq('status', 'pending').order('created_at', { ascending: false }).limit(3),
+      supabaseClient.from('notifications').select('*').eq('user_id', userId).eq('read', false).order('created_at', { ascending: false }).limit(5),
     ]);
 
-    setTasks(tasksRes.data as Task[] || []);
+    const allTasks = tasksRes.data as Task[] || [];
+    const prioritized = prioritizeTasks(allTasks.map(normalizeTask)).ranked;
+    
+    // Convert back to UI task structure, maintaining the joined project
+    const topTasks = prioritized.slice(0, 5).map(pt => {
+      return allTasks.find(t => t.id === pt.id) as Task;
+    });
+
+    setTasks(topTasks);
     setProjects(projectsRes.data as Project[] || []);
     setAgentRuns(runsRes.data as AgentRun[] || []);
     setApprovals(approvalsRes.data as Approval[] || []);
@@ -65,6 +70,40 @@ function HomeContent() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Poll active run if it exists and is not finished
+  useEffect(() => {
+    if (!activeRun || ['completed', 'failed', 'cancelled'].includes(activeRun.status)) {
+      return;
+    }
+
+    const intervalId = setInterval(async () => {
+      const { data, error } = await supabaseClient
+        .from('agent_runs')
+        .select('*')
+        .eq('id', activeRun.id)
+        .single();
+      
+      if (!error && data) {
+        setActiveRun(data as AgentRun);
+        if (['completed', 'failed', 'cancelled'].includes(data.status)) {
+          loadData(); // refresh recent runs
+        }
+      }
+    }, 1500);
+
+    return () => clearInterval(intervalId);
+  }, [activeRun?.id, activeRun?.status, loadData]);
+
+  const handleRunStart = (runId: string) => {
+    setActiveRun({
+      id: runId,
+      status: 'queued',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as unknown as AgentRun);
+    loadData();
+  };
 
   const priorityColors: Record<string, string> = {
     urgent: 'bg-destructive/10 text-destructive border-destructive/20',
@@ -95,7 +134,7 @@ function HomeContent() {
       </div>
 
       {/* Command Input */}
-      <CommandInput onRunStart={loadData} />
+      <CommandInput onRunStart={handleRunStart} />
 
       {/* Active Agent Run */}
       {activeRun && (

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AppShell } from '@/components/orbit/app-shell';
 import { supabaseClient } from '@/lib/supabase/client';
 import type { Idea } from '@/lib/types/database';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,9 +24,7 @@ const statusColors: Record<string, string> = {
 
 export default function IdeasPage() {
   return (
-    <AppShell>
       <IdeasContent />
-    </AppShell>
   );
 }
 
